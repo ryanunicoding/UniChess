@@ -106,6 +106,10 @@ class ChessGame:
         # Basic validation - Prevent Illegal Move
         if target and target[0] == piece[0]:  # Can't capture own pieces
             return False
+        
+        # Prevent king capture - the game should end via checkmate instead
+        if target and target[1] == 'K':
+            return False
             
         piece_type = piece[1]
         
