@@ -84,9 +84,18 @@ class ChessGame:
                 self.update_button_text(row, col)
                 self.update_button_text(old_row, old_col)
                 
-                # Switch players
-                self.current_player = "black" if self.current_player == "white" else "white"
-                self.status_label.config(text=f"{self.current_player}'s turn")
+                # Check for game end conditions
+                if self.is_checkmate():
+                    winner = "White" if self.current_player == "black" else "Black"
+                    messagebox.showinfo("Game Over", f"Checkmate! {winner} wins!")
+                    self.window.quit()
+                elif self.is_stalemate():
+                    messagebox.showinfo("Game Over", "Stalemate! The game is a draw!")
+                    self.window.quit()
+                else:
+                    # Switch players
+                    self.current_player = "black" if self.current_player == "white" else "white"
+                    self.status_label.config(text=f"{self.current_player}'s turn")
             
             self.selected_piece = None
     
@@ -130,6 +139,60 @@ class ChessGame:
             return abs(to_row - from_row) <= 1 and abs(to_col - from_col) <= 1
             
         return False
+
+    def is_in_check(self, player):
+        # Find the king's position
+        king_pos = None
+        king_piece = 'wK' if player == 'white' else 'bK'
+        for row in range(8):
+            for col in range(8):
+                if self.board[row][col] == king_piece:
+                    king_pos = (row, col)
+                    break
+            if king_pos:
+                break
+        
+        if not king_pos:
+            return False
+        
+        # Check if any opponent's piece can capture the king
+        opponent = 'black' if player == 'white' else 'white'
+        for row in range(8):
+            for col in range(8):
+                piece = self.board[row][col]
+                if piece and piece[0] == ('b' if opponent == 'black' else 'w'):
+                    if self.is_valid_move(row, col, king_pos[0], king_pos[1]):
+                        return True
+        return False
+
+    def get_all_legal_moves(self, player):
+        moves = []
+        for from_row in range(8):
+            for from_col in range(8):
+                piece = self.board[from_row][from_col]
+                if piece and piece[0] == ('w' if player == 'white' else 'b'):
+                    for to_row in range(8):
+                        for to_col in range(8):
+                            if self.is_valid_move(from_row, from_col, to_row, to_col):
+                                # Try the move
+                                original_target = self.board[to_row][to_col]
+                                self.board[to_row][to_col] = piece
+                                self.board[from_row][from_col] = ""
+                                
+                                # If the move doesn't leave/put the king in check, it's legal
+                                if not self.is_in_check(player):
+                                    moves.append((from_row, from_col, to_row, to_col))
+                                
+                                # Undo the move
+                                self.board[from_row][from_col] = piece
+                                self.board[to_row][to_col] = original_target
+        return moves
+
+    def is_checkmate(self):
+        return self.is_in_check(self.current_player) and not self.get_all_legal_moves(self.current_player)
+
+    def is_stalemate(self):
+        return not self.is_in_check(self.current_player) and not self.get_all_legal_moves(self.current_player)
 
     def run(self):
         self.window.mainloop()
